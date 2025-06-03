@@ -1,71 +1,143 @@
-# Assignment
+# Tag Annotation
 
-Given the tags and sentences provided, write the code to tag the sentences with the appropriate tags.
+## Overview
 
-To complete the task, copy  the repository code and implement the solution in your own repository.  The code should
-be written in python. Any python libraries can be used but if non-standard libraries are used please also
-create a *requirements.txt* file with the library name and version and include it with your submission.  
+This project focuses on semi-automated sentence classification for a domain-specific dataset. The goal is to assign one or more relevant category tags to sentences using both rule-based and ML-based methods. The full corpus consists of **2,997 sentences**.
 
-Please include all the code used and provide comments or README as appropriate.
+We experimented with two primary tagging strategies:
 
+---
 
-# Data
+## Task 1: Keyword-Based Matching
 
-[tags](data/tags.csv) contains the list of ids, tag names and keywords in csv format. Keywords are array of strings
-encoded as a string. For example,
+In this stage, we applied direct keyword and phrase matching techniques based on a curated dictionary of tags and associated keywords.
 
-```aiignore
-44,Death of a Relative,"['died', 'death', 'funeral', 'payable on death', 'death certificate', 'passed away', 'passed on', 'estate', 'beneficiary', 'probate']"
+* **Total Sentences Tagged**: 1,545 out of 2,997
+* **Method**: Cleaned text matched against keyword/tag mappings using exact and multi-word phrase matching.
+
+### Tag Distribution (Matching)
+
+```
+{'Personal Loans': 43,
+ 'Death of a Relative': 8,
+ 'Commercial Banking': 26,
+ 'Vehicle Loan': 67,
+ 'Fraud': 113,
+ 'Retirement Planning': 15,
+ 'Cash Management': 26,
+ 'Marital Status': 6,
+ 'Commercial Loans': 7,
+ 'Complaints': 4,
+ 'Trust/Estate Planning': 8,
+ 'Aging Parents': 2,
+ 'Credit Card': 74,
+ 'Starting a Business': 1,
+ 'Follow up requested': 0,
+ 'Payments': 59,
+ 'Debit Cards': 47,
+ 'Children and Savings': 6,
+ 'Statements': 60,
+ 'Security Messages': 10,
+ 'Retail Banking': 486,
+ 'Online Accounts': 436,
+ 'Home Loans': 53,
+ 'Investing': 42,
+ 'College/Independence': 2,
+ 'Tax Information': 45,
+ 'Accounts': 210}
 ```
 
-[sentences](data/sentences.csv) contains the list of sentences, one per line.
-```aiignore
-Loan payoff
-how do i dispute a charge?
-Is the system down now?
+---
+
+## Task 2: BERT Classification & Cosine Similarity
+
+We tested BERT for multi-label classification, but due to extreme label imbalance and limited training data (1,460 labeled examples), the model performance was not optimal.
+
+To address this, we combined:
+
+1. **Sentence embeddings using SentenceTransformer**
+2. **Cosine similarity with averaged tag + keyword embeddings**
+
+This hybrid approach significantly improved coverage:
+
+* **Total Sentences Tagged**: 2,081 out of 2,997
+
+### Tag Distribution (Hybrid Cosine + Keyword)
+
+```
+{'Personal Loans': 148,
+ 'Death of a Relative': 13,
+ 'Commercial Banking': 53,
+ 'Vehicle Loan': 75,
+ 'Fraud': 153,
+ 'Retirement Planning': 24,
+ 'Cash Management': 136,
+ 'Marital Status': 10,
+ 'Commercial Loans': 52,
+ 'Complaints': 33,
+ 'Trust/Estate Planning': 25,
+ 'Aging Parents': 13,
+ 'Credit Card': 229,
+ 'Starting a Business': 15,
+ 'Follow up requested': 0,
+ 'Payments': 174,
+ 'Debit Cards': 123,
+ 'Children and Savings': 20,
+ 'Statements': 63,
+ 'Security Messages': 18,
+ 'Retail Banking': 671,
+ 'Online Accounts': 665,
+ 'Home Loans': 65,
+ 'Investing': 70,
+ 'College/Independence': 8,
+ 'Tax Information': 55,
+ 'Accounts': 646}
 ```
 
-# Task 1
+---
 
-Given the data above tag each sentence with all the tags based on exactly matching keywords ignoring the lower/upper case differences.  The output should
-be
-```aiignore
-sentence\ttag1, tag2, tag3
+## Key Challenges
+
+* **Imbalanced Label Distribution**: Several tags had 0 or fewer than 10 examples, making supervised learning difficult.
+* **Overfitting Risk with BERT**: Due to small dataset size.
+* **Lack of negative class examples ("no tag")**: Difficult for classifier to learn when not to assign a tag.
+
+---
+
+## Future Improvements
+
+To improve tagging quality, especially for underrepresented categories:
+
+1. **Synthetic Data Augmentation**
+
+   * Generate new sentences for low-sample tags using LLMs (e.g., ChatGPT)
+
+2. **Zero-shot Tagging + Manual Labeling**
+
+   * Use LLMs in zero-shot mode to pre-label and curate examples.
+
+3. **RAG with Vector DB**
+
+   * Store all sentences in a vector DB (e.g., FAISS, Chroma).
+   * For each tag, retrieve nearest neighbors using semantic search and review manually.
+
+---
+
+## Final Thoughts
+
+Keyword-based techniques provide precision, while embedding-based cosine similarity adds generalization. A hybrid of both allows robust, scalable, and interpretable sentence classification in real-world, label-sparse settings.
+
+**Directory Structure**
+
 ```
-i. each sentence followed by a TAB and then comma-delimited list of tags that match.  If no tags apply, the output line
-should be just the sentence.
-
-Here is example of the output using couple sentences from [sentences](data/sentences.txt) with comments above each sentence
-```aiignore
-...
-# due to match of 'car loan' in the keywords for  "Vehicle Loan" tag and 'interest rate' in the keywords for "Credit Card"
-I need to know my interest rate on my car loan\tVehicle Loan, Credit Card
-# no tag assigned since no matches were found for any keywords in tags.csv
-Change of address\t
-#  due to match of 'CD' in the keywords for "Investing"
-CD rates\tInvesting
-...
+├── data/
+│   ├── sentences.txt
+│   └── tags.csv
+├── results/
+│   ├── task_1_output.tsv
+│   └── task_2_cosine.tsv
+├── task1_keyword_match.py
+├── task2_cosine_similarity.py
+├── task2_bert.py
+└── README.md
 ```
-
-The output file should be named: *task_1_output.tsv* 
-
-# Task 2
-
-Use any machine learning based method to tag each sentence with the tags based on that method you chose and output in 
-the same format as above:
-```aiignore
-sentence\ttag1, tag2, tag3
-```
-ie each sentence followed by a TAB and then comma-delimited list of tags that match.  If no tags apply, the output line
-should be just the sentence.
-
-The output file should be named: *task_2_output.tsv* 
-
-If the method requires training, please include both the training and tagging code in your submission. 
-
-# Submission Guidelines
-Commit and push to your own repo and send us the repo link. Please do not fork or use our name in your repo.
-
-
-
-
